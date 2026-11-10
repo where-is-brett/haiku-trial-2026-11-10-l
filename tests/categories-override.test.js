@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ensureOverridesTable, categoryFor } from '../src/lib/overrides.js';
+import { ensureOverridesTable, categoryFor, saveCategory } from '../src/lib/overrides.js';
 
 // Opens an in-memory ledger with the same transactions table as src/server.js,
 // the overrides table, and the given rows.
@@ -34,4 +34,27 @@ test('a description that is null or empty gets other', () => {
   const db = ledgerWith([[3, null], [4, '']]);
   assert.equal(categoryFor(db, { id: 3, description: null }), 'other');
   assert.equal(categoryFor(db, { id: 4, description: '' }), 'other');
+});
+
+test('a saved category replaces an earlier save for the same transaction', () => {
+  const db = ledgerWith([[1, 'Pasta Corner']]);
+  saveCategory(db, 1, 'shopping');
+  saveCategory(db, 1, 'health');
+  assert.equal(categoryFor(db, { id: 1, description: 'Pasta Corner' }), 'health');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM category_overrides WHERE transaction_id = 1').get().n, 1);
+});
+
+test('a category key outside the eight is refused and nothing is saved', () => {
+  const db = ledgerWith([[1, 'Pasta Corner']]);
+  for (const key of ['nonsense', 'Eating out', 'Groceries', ' groceries ', 'constructor', 'toString']) {
+    assert.throws(() => saveCategory(db, 1, key), { status: 400 });
+  }
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM category_overrides').get().n, 0);
+});
+
+test('an unknown transaction id is refused and nothing is saved', () => {
+  const db = ledgerWith([[1, 'Pasta Corner']]);
+  assert.throws(() => saveCategory(db, 999, 'groceries'), { status: 404 });
+  assert.throws(() => saveCategory(db, 'abc', 'groceries'), { status: 404 });
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM category_overrides').get().n, 0);
 });
