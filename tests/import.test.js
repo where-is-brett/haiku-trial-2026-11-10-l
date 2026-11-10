@@ -19,6 +19,11 @@ test('spaces around unquoted fields are trimmed', () => {
   assert.deepEqual(splitCsvLine(' Date , Description ,Amount '), ['Date', 'Description', 'Amount']);
 });
 
+test('a quote inside an unquoted field is literal text', () => {
+  assert.deepEqual(splitCsvLine('1"0.00'), ['1"0.00']);
+  assert.deepEqual(splitCsvLine('Joe "The Bar",5.00'), ['Joe "The Bar"', '5.00']);
+});
+
 const HEADER = 'Date,Description,Amount';
 
 test('a statement with CRLF lines and a byte-order mark is read', () => {
@@ -73,6 +78,22 @@ test('a bad amount, a bad date, a short row, an impossible date and a single dec
 test('a row with four fields is refused', () => {
   assert.throws(() => readStatement(HEADER + '\n02/08/2026,Shop,1.00,extra'),
     { message: 'This file is not a bank statement: line 2 is not a valid transaction.' });
+});
+
+test('a quote inside an unquoted amount is refused with the line number', () => {
+  assert.throws(() => readStatement(HEADER + '\n02/08/2026,Shop,1"0.00'),
+    { message: 'This file is not a bank statement: line 2 is not a valid transaction.' });
+});
+
+test('a quote inside an unquoted date is refused with the line number', () => {
+  for (const row of ['02"/08/2026,Shop,1.00', '02"/08/2026",Shop,1.00']) {
+    assert.throws(() => readStatement(HEADER + '\n' + row),
+      { message: 'This file is not a bank statement: line 2 is not a valid transaction.' });
+  }
+});
+
+test('a quote in the middle of an unquoted description is read as literal text', () => {
+  assert.equal(readStatement(HEADER + '\n02/08/2026,Joe "The Bar",5.00')[0].description, 'Joe "The Bar"');
 });
 
 test('the refused line number counts the header as line 1', () => {

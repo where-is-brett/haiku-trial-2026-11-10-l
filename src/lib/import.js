@@ -4,9 +4,10 @@ import { parseAmount } from './money.js';
 import { parseDate } from './dates.js';
 
 // Splits one line of a CSV statement into fields. A comma inside double quotes is
-// part of the field, and a doubled quote inside a quoted field is one quote.
-// Spaces around unquoted fields are trimmed; a row is one line, so line breaks
-// inside a quoted field are not handled.
+// part of the field, and a doubled quote inside a quoted field is one quote. A double
+// quote opens a quoted field only as the field's first character; elsewhere in an
+// unquoted field it is literal text. Spaces around unquoted fields are trimmed; a row
+// is one line, so line breaks inside a quoted field are not handled.
 export function splitCsvLine(line) {
   const fields = [];
   let field = '';
@@ -23,7 +24,7 @@ export function splitCsvLine(line) {
       } else {
         inQuotes = false;
       }
-    } else if (ch === '"') {
+    } else if (ch === '"' && field === '' && !wasQuoted) {
       inQuotes = true;
       wasQuoted = true;
     } else if (ch === ',') {
