@@ -1,7 +1,5 @@
 # Read a statement Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** A bank statement's text is read into dated, signed amounts, and anything that is not a statement is refused. Slice 1 of `import-statement`.
 
 **Architecture:** Two pieces. `parseAmount` in `src/lib/money.js` learns that brackets mean money back. A new `src/lib/import.js` holds a small CSV line reader and `readStatement(text)`, which checks every field with a strict pattern before it calls `parseDate` or `parseAmount`. Nothing touches the database or HTTP in this slice.
